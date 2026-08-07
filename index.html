@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f47f7f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="うちの子ノート">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png"><title>うちの子ノート</title>
+<style>
+:root{--p:#f47f7f;--p2:#ffe9e9;--bg:#fffaf7;--ink:#332a27;--muted:#817570;--line:#eee2dc;--card:#fff;--green:#6bb57a;--blue:#5794d1}
+*{box-sizing:border-box}body{margin:0;background:#eee8e4;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif}.app{max-width:480px;min-height:100vh;margin:auto;background:var(--bg);padding-bottom:80px}
+header{position:sticky;top:0;z-index:5;background:rgba(255,250,247,.96);padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between}h1{font-size:23px;margin:0}.sub{font-size:11px;color:var(--muted)}
+main{padding:10px 15px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px;margin:10px 0;box-shadow:0 3px 12px #5b3a2410}.pet{display:flex;gap:13px;align-items:center}.avatar{width:62px;height:62px;border-radius:50%;background:#ffe4d5;display:grid;place-items:center;font-size:30px}.pet h2{margin:0 0 3px;font-size:19px}.muted{font-size:12px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 4px;text-align:center;font-size:11px}.tile b{font-size:21px;display:block;margin-bottom:4px}.section{display:flex;justify-content:space-between;align-items:center;margin:19px 2px 7px;font-weight:800}.section button{border:0;background:none;color:var(--p);font-weight:700}.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.badge{background:var(--p2);color:#bd4e4e;padding:4px 8px;border-radius:99px;font-size:10px}.primary,.secondary,.danger{border-radius:11px;padding:10px 13px;font:inherit;cursor:pointer}.primary{border:0;background:var(--p);color:white;font-weight:700}.secondary{border:1px solid var(--line);background:#fff}.danger{border:1px solid #f1cccc;background:#fff6f6;color:#c44}
+.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(480px,100%);height:70px;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);z-index:10}.nav{border:0;background:white;color:#756b66;font-size:10px}.nav span{display:block;font-size:21px}.nav.active{color:var(--p);font-weight:800}
+input,select,textarea{width:100%;padding:10px;border:1px solid #ddd0c9;border-radius:10px;background:white;font:inherit}label{display:block;font-size:11px;font-weight:700;margin:10px 0 5px}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal{display:none;position:fixed;inset:0;background:#0006;z-index:20;align-items:flex-end}.modal.open{display:flex}.sheet{width:min(480px,100%);max-height:91vh;overflow:auto;background:var(--bg);border-radius:22px 22px 0 0;padding:17px;margin:auto}.head{display:flex;justify-content:space-between;align-items:center}.close{border:0;background:#eee;border-radius:50%;width:32px;height:32px}.notice{padding:11px;border-radius:13px;background:#fff2e8;font-size:11px}.ok{background:#eaf7ed;color:#357a43}.photo{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px}.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.empty{text-align:center;padding:25px;color:var(--muted)}.toast{display:none;position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#332a27;color:#fff;padding:10px 14px;border-radius:99px;font-size:12px;z-index:30}
+</style>
+</head>
+<body><div class="app">
+<header><div><div class="sub">大切な家族を、もっと安心に</div><h1>うちの子ノート</h1></div><button class="secondary" onclick="openPet()">＋</button></header>
+<main id="main"></main>
+<nav class="bottom">
+<button class="nav active" data-tab="home"><span>⌂</span>ホーム</button><button class="nav" data-tab="calendar"><span>▣</span>予定</button><button class="nav" data-tab="record"><span>＋</span>記録</button><button class="nav" data-tab="memory"><span>▧</span>思い出</button><button class="nav" data-tab="menu"><span>☰</span>メニュー</button></nav>
+</div>
+<div id="modal" class="modal"><div class="sheet"><div class="head"><h2 id="mt"></h2><button class="close" onclick="closeM()">×</button></div><div id="mb"></div></div></div><div id="toast" class="toast"></div>
+<script>
+const K="uchinoko-pro-v2";
+let db=JSON.parse(localStorage.getItem(K)||"null")||{
+ owner:null,active:1,
+ pets:[
+  {id:1,name:"ココ",type:"トイプードル",sex:"♀",birth:"2022-03-12",emoji:"🐶",weight:5.2},
+  {id:2,name:"ミミ",type:"スコティッシュフォールド",sex:"♀",birth:"2023-08-05",emoji:"🐱",weight:3.8}
+ ],
+ events:[
+  {id:1,pet:1,date:"2026-08-12",time:"10:00",type:"動物病院",title:"健康診断",place:"みらい動物病院",remind:true},
+  {id:2,pet:1,date:"2026-08-20",time:"14:00",type:"トリミング",title:"トリミング",place:"わんにゃんサロン",remind:false},
+  {id:3,pet:1,date:"2026-08-25",time:"09:00",type:"薬・予防薬",title:"フィラリア予防",place:"",remind:true}
+ ],
+ records:[{id:1,pet:1,date:"2026-08-07",type:"体重",value:"5.2 kg",note:"元気"},{id:2,pet:1,date:"2026-07-10",type:"ワクチン",value:"混合ワクチン",note:"接種済み"}],
+ memories:[],shares:[],backupDate:null,
+medical:{history:"",allergy:"",chronic:"",surgery:"",blood:"不明",hospital:"",hospitalTel:"",meds:""},
+meds:[{id:1,pet:1,name:"フィラリア予防薬",next:"2026-09-10",days:3,done:false}],
+documents:[],
+health:[
+ {id:1,pet:1,date:"2026-08-07",weight:5.2,food:85,water:250,temp:"38.5",stool:"普通",urine:"普通",symptom:"元気"},
+ {id:2,pet:1,date:"2026-07-31",weight:5.3,food:85,water:240,temp:"38.4",stool:"普通",urine:"普通",symptom:"元気"}
+],
+food:{name:"ロイヤルカナン",amount:85,times:2,treat:"少量",history:"2026-07-01 フード変更"}
+};
+function save(){localStorage.setItem(K,JSON.stringify(db))}
+function p(){return db.pets.find(x=>x.id===db.active)||db.pets[0]}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function fmt(d){return new Date(d+"T00:00").toLocaleDateString("ja-JP",{month:"numeric",day:"numeric",weekday:"short"})}
+function toast(s){let x=document.getElementById("toast");x.textContent=s;x.style.display="block";setTimeout(()=>x.style.display="none",1800)}
+function openM(t,b){mt.textContent=t;mb.innerHTML=b;modal.classList.add("open")}function closeM(){modal.classList.remove("open")}
+function age(b){let d=new Date(b),n=new Date(),a=n.getFullYear()-d.getFullYear();if(n<new Date(n.getFullYear(),d.getMonth(),d.getDate()))a--;return a}
+function eventHTML(e){return `<div class="row"><div><span class="badge">${esc(e.type)}</span><b style="display:block">${esc(e.title)}</b><div class="muted">${esc(e.place||"")}${e.remind?" ・ 🔔通知ON":""}</div></div><div style="text-align:right"><b>${fmt(e.date)}</b><div>${esc(e.time||"")}</div></div></div>`}
+function tabs(){document.querySelectorAll(".nav").forEach(x=>x.onclick=()=>go(x.dataset.tab))}
+function go(t){document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));({home:home,calendar:calendar,record:openRecord,memory:memory,menu:menu}[t])()}
+tabs();
+
+function home(){
+let q=p(), ev=db.events.filter(e=>e.pet===q.id).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3), rs=db.records.filter(r=>r.pet===q.id).slice(0,3);
+main.innerHTML=`<div class="card pet"><div class="avatar">${q.emoji}</div><div><h2>${esc(q.name)} <span class="badge">${q.sex}</span></h2><div>${esc(q.type)}・${age(q.birth)}歳</div><div class="muted">体重 ${q.weight||"-"} kg</div></div><button class="secondary" onclick="switchPet()">切替</button></div>
+<div class="grid"><div class="tile" onclick="openRecord()"><b>♥</b>健康記録</div><div class="tile" onclick="calendar()"><b>▣</b>予定</div><div class="tile" onclick="memory()"><b>📷</b>写真</div><div class="tile" onclick="showCloud()"><b>☁</b>クラウド</div></div>
+<div class="section">次の予定 <button onclick="calendar()">すべて見る ›</button></div><div class="card">${ev.length?ev.map(eventHTML).join(""):'<div class="empty">予定はありません</div>'}</div>
+<div class="section">最近の記録 <button onclick="openRecord()">＋追加</button></div><div class="card">${rs.map(r=>`<div class="row"><div><b>${esc(r.type)}</b><div class="muted">${esc(r.note||"")}</div></div><div><b>${esc(r.value)}</b><div class="muted">${fmt(r.date)}</div></div></div>`).join("")||'<div class="empty">記録を追加しましょう</div>'}</div>
+<div class="notice ok">☁️ クラウド同期：デモON　｜　🔔 リマインダー：設定可能</div>`}
+
+function switchPet(){openM("ペットを切り替え",db.pets.map(x=>`<button class="secondary" style="width:100%;margin:5px 0;text-align:left" onclick="db.active=${x.id};save();closeM();home()">${x.emoji} ${esc(x.name)}　<span class="muted">${esc(x.type)}</span></button>`).join(""))}
+function calendar(){let a=db.events.filter(e=>e.pet===p().id).sort((x,y)=>x.date.localeCompare(y.date));main.innerHTML=`<div class="section">📅 ${esc(p().name)}の予定 <button onclick="openEvent()">＋追加</button></div><div class="card">${a.map(e=>`<div class="row">${eventHTML(e)}<button class="danger" onclick="delEvent(${e.id})">削除</button></div>`).join("")||'<div class="empty">予定なし</div>'}</div><div class="notice">🔔 通知ONの予定は、公開版でプッシュ通知・メール通知に接続できます。</div>`}
+function openEvent(){openM("予定・リマインダー",`<label>日付</label><input id="ed" type="date" value="${new Date().toISOString().slice(0,10)}"><label>時間</label><input id="et" type="time" value="09:00"><label>種類</label><select id="ey"><option>動物病院</option><option>ワクチン</option><option>トリミング</option><option>薬・予防薬</option><option>その他</option></select><label>予定名</label><input id="ex" placeholder="フィラリア予防など"><label>場所・施設</label><input id="ep" placeholder="病院・サロン名"><label><input id="er" type="checkbox" checked style="width:auto"> リマインダーをON</label><br><button class="primary" onclick="addEvent()">保存</button>`)}
+function addEvent(){db.events.push({id:Date.now(),pet:p().id,date:ed.value,time:et.value,type:ey.value,title:ex.value||ey.value,place:ep.value,remind:er.checked});save();closeM();calendar();toast("予定を保存しました")}
+function delEvent(id){if(confirm("削除しますか？")){db.events=db.events.filter(e=>e.id!==id);save();calendar()}}
+
+function openRecord(){openM("健康記録",`<label>日付</label><input id="rd" type="date" value="${new Date().toISOString().slice(0,10)}"><label>種類</label><select id="rt"><option>体重</option><option>体調</option><option>ワクチン</option><option>通院</option><option>薬・予防薬</option><option>その他</option></select><label>内容・数値</label><input id="rv" placeholder="5.3 kg / 接種済み など"><label>メモ</label><textarea id="rn" rows="3"></textarea><br><button class="primary" onclick="addRecord()">保存</button>`)}
+function addRecord(){let r={id:Date.now(),pet:p().id,date:rd.value,type:rt.value,value:rv.value,note:rn.value};db.records.unshift(r);if(rt.value==="体重"){let n=parseFloat(rv.value);if(!isNaN(n))p().weight=n}save();closeM();home();toast("健康記録を保存しました")}
+
+function memory(){let a=db.memories.filter(x=>x.pet===p().id);main.innerHTML=`<div class="section">📷 思い出 <button onclick="openMemory()">＋追加</button></div><div class="card">${a.length?`<div class="photos">${a.map(x=>`<div><img class="photo" src="${x.src}"><div style="font-size:10px">${esc(x.text)}</div></div>`).join("")}</div>`:'<div class="empty">写真を追加しましょう</div>'}</div><div class="notice">☁️ 公開版では写真をクラウドストレージへ保存し、家族と共有できます。</div>`}
+function openMemory(){openM("思い出写真",`<label>写真</label><input id="mf" type="file" accept="image/*"><label>コメント</label><textarea id="mx" rows="3" placeholder="今日の思い出"></textarea><br><button class="primary" onclick="addMemory()">保存</button>`)}
+function addMemory(){let f=mf.files[0];if(!f){alert("写真を選択してください");return}let r=new FileReader();r.onload=()=>{db.memories.unshift({id:Date.now(),pet:p().id,src:r.result,text:mx.value});save();closeM();memory();toast("写真を保存しました")};r.readAsDataURL(f)}
+
+function openPet(){openM("ペットを登録",`<label>名前</label><input id="pn" placeholder="名前"><label>種類</label><input id="pk" placeholder="犬・猫など"><div class="two"><div><label>性別</label><select id="pg"><option>♀</option><option>♂</option></select></div><div><label>誕生日</label><input id="pb" type="date"></div></div><label>アイコン</label><select id="pi"><option>🐶</option><option>🐱</option><option>🐰</option><option>🐹</option></select><br><button class="primary" onclick="addPet()">登録</button>`)}
+function addPet(){if(!pn.value)return alert("名前を入力してください");db.pets.push({id:Date.now(),name:pn.value,type:pk.value||"ペット",sex:pg.value,birth:pb.value||"2020-01-01",emoji:pi.value,weight:0});save();closeM();db.active=db.pets.at(-1).id;home();toast("ペットを登録しました")}
+
+function menu(){main.innerHTML=`<div class="section">⚙️ アカウント・設定</div>
+<div class="card"><button class="primary" style="width:100%" onclick="openLogin()">① 飼い主登録・ログイン</button><div style="height:8px"></div><button class="secondary" style="width:100%" onclick="openSocial()">⑦ Apple / Google ログイン</button></div>
+<div class="card"><div class="row"><b>② ペット管理</b><button class="secondary" onclick="switchPet()">切り替え</button></div><div class="row"><span>登録数</span><b>${db.pets.length}匹</b></div><button class="secondary" style="width:100%;margin-top:8px" onclick="openPet()">＋ペット追加</button></div>
+<div class="card"><div class="row"><b>③ 写真クラウド保存</b><span class="badge">準備OK</span></div><p class="muted">このデモでは端末保存。公開版ではクラウドストレージへ同期。</p><button class="secondary" onclick="showCloud()">クラウド設定を見る</button></div>
+<div class="card"><div class="row"><b>④ リマインダー通知</b><span class="badge">${db.events.filter(e=>e.remind).length}件</span></div><p class="muted">病院・ワクチン・薬などの予定を通知設定できます。</p><button class="secondary" onclick="calendar()">予定を管理</button></div>
+<div class="card"><div class="row"><b>⑤ 施設との連携</b><button class="secondary" onclick="openPartners()">開く</button></div><div class="row"><b>⑥ 家族共有</b><button class="secondary" onclick="openShare()">開く</button></div></div>
+<div class="card"><div class="row"><b>🩺 ペットカルテ</b><button class="secondary" onclick="openMedical()">開く</button></div><div class="muted">既往歴・アレルギー・持病・手術歴・血液型・病院・薬</div></div>
+<div class="card"><div class="row"><b>💊 薬・予防薬</b><button class="secondary" onclick="openMeds()">管理</button></div><div class="muted">投薬予定・通知・投薬済み記録</div></div>
+<div class="card"><div class="row"><b>💉 ワクチン・書類</b><button class="secondary" onclick="openDocs()">保存</button></div><div class="muted">証明書・診療明細などを写真保存</div></div>
+<div class="card"><div class="row"><b>⚖️ 健康グラフ</b><button class="secondary" onclick="openHealth()">記録</button></div><div class="muted">体重・食事・飲水・体温・排便・排尿</div></div>
+<div class="card"><div class="row"><b>🍚 食事・おやつ</b><button class="secondary" onclick="openFood()">管理</button></div><div class="muted">フード・量・回数・おやつ・変更履歴</div></div>
+<div class="card"><div class="row"><b>🚨 緊急時プロフィール</b><button class="secondary" onclick="openEmergency()">表示</button></div><div class="muted">病院で見せる重要情報を一画面に</div></div>
+<div class="card"><div class="row"><b>🏥 診療用サマリー</b><button class="secondary" onclick="openSummary()">表示</button></div><div class="muted">基本情報・ワクチン・投薬・既往歴・体重・症状・写真</div></div>
+<div class="card"><div class="row"><b>📈 AI健康アシスタント</b><button class="secondary" onclick="openAI()">チェック</button></div><div class="muted">記録の変化や予定から注意点を表示（診断ではありません）</div></div>
+<div class="card"><b>⑧ データのバックアップ</b><p class="muted">JSONファイルとして保存・復元できます。</p><button class="secondary" onclick="backup()">バックアップ保存</button> <button class="secondary" onclick="document.getElementById('restore').click()">復元</button><input id="restore" type="file" accept=".json" style="display:none" onchange="restore(this)"></div>`}
+
+function openLogin(){openM("飼い主登録・ログイン",`<label>メールアドレス</label><input id="em" type="email" placeholder="you@example.com"><label>パスワード</label><input id="pw" type="password" placeholder="6文字以上"><br><button class="primary" onclick="login()">登録 / ログイン</button><div class="notice" style="margin-top:12px">※現在はプロトタイプ用のローカルログインです。公開版では安全な認証サーバーへ接続します。</div>`)}
+function login(){if(!em.value)return alert("メールアドレスを入力してください");db.owner={email:em.value,name:em.value.split("@")[0]};save();closeM();toast("ログインしました")}
+function openSocial(){openM("Apple / Google ログイン",`<button class="primary" style="width:100%;margin:5px 0" onclick="social('Apple')"> Appleでログイン</button><button class="secondary" style="width:100%;margin:5px 0" onclick="social('Google')">G Googleでログイン</button><div class="notice" style="margin-top:10px">本番版ではOAuth認証に接続します。GitHub Pagesだけでは認証情報を安全に管理できないため、Supabase/Firebase等のバックエンドが必要です。</div>`)}
+function social(s){db.owner={email:"demo@"+s.toLowerCase()+".local",name:s+"ユーザー"};save();closeM();toast(s+"ログイン（デモ）")}
+function showCloud(){openM("☁️ クラウド保存",`<div class="notice ok"><b>現在：デモモード</b><br>データはこのiPhoneのブラウザに保存されています。</div><p>本番版では、飼い主アカウントに紐づけて以下をクラウド保存できます。</p><ul><li>ペット情報・健康記録</li><li>写真・思い出</li><li>予定・リマインダー</li><li>家族共有設定</li></ul><button class="primary" onclick="closeM();toast('クラウド接続設定は本番版で有効化')">接続設定</button>`)}
+function openPartners(){openM("⑤ 動物病院・トリミング連携",`<label>施設名</label><input id="partner" placeholder="みらい動物病院"><label>種類</label><select><option>動物病院</option><option>トリミング</option><option>ペットホテル</option></select><br><button class="primary" onclick="closeM();toast('連携先を登録しました（デモ）')">登録</button><div class="notice" style="margin-top:12px">本番版では予約・診療履歴・店舗からのお知らせ等をAPI連携できます。</div>`)}
+function openShare(){openM("⑥ 家族共有",`<label>共有する家族のメール</label><input id="sharemail" type="email" placeholder="family@example.com"><label>権限</label><select id="role"><option>閲覧・記録できる</option><option>閲覧のみ</option></select><br><button class="primary" onclick="share()">招待を送る</button><div class="notice" style="margin-top:12px">本番版では招待メールを送り、同じペット情報を家族の端末から共有できます。</div>`)}
+function share(){if(!sharemail.value)return alert("メールを入力してください");db.shares.push({email:sharemail.value,role:role.value});save();closeM();toast("家族への招待を作成しました")}
+function backup(){let blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="uchinoko-backup.json";a.click();URL.revokeObjectURL(a.href);db.backupDate=new Date().toISOString();save();toast("バックアップを保存しました")}
+function restore(inp){let f=inp.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);db=x;save();location.reload()}catch(e){alert("バックアップファイルを読み込めません")}};r.readAsText(f)}
+
+function openMedical(){
+ let m=db.medical||{};
+ openM("🩺 ペットカルテ",`<label>既往歴</label><textarea id="mh" rows="2">${esc(m.history||"")}</textarea>
+ <label>アレルギー</label><textarea id="ma" rows="2">${esc(m.allergy||"")}</textarea>
+ <label>持病</label><textarea id="mc" rows="2">${esc(m.chronic||"")}</textarea>
+ <label>手術歴</label><textarea id="ms" rows="2">${esc(m.surgery||"")}</textarea>
+ <label>血液型</label><input id="mblood" value="${esc(m.blood||"不明")}">
+ <label>かかりつけ病院</label><input id="mhos" value="${esc(m.hospital||"")}">
+ <label>病院電話</label><input id="mht" value="${esc(m.hospitalTel||"")}">
+ <label>現在飲んでいる薬</label><textarea id="mmed" rows="2">${esc(m.meds||"")}</textarea><br>
+ <button class="primary" onclick="saveMedical()">保存</button>`);
+}
+function saveMedical(){
+ db.medical={history:mh.value,allergy:ma.value,chronic:mc.value,surgery:ms.value,blood:mblood.value,hospital:mhos.value,hospitalTel:mht.value,meds:mmed.value};
+ save();closeM();toast("カルテを保存しました");
+}
+function openMeds(){
+ let a=(db.meds||[]).filter(x=>x.pet===p().id);
+ openM("💊 薬・予防薬",`${a.map(x=>`<div class="row"><div><b>${esc(x.name)}</b><div class="muted">次回：${fmt(x.next)} ・ ${x.days}日前通知</div></div><button class="${x.done?'secondary':'primary'}" onclick="dose(${x.id})">${x.done?'✓ 投薬済み':'投薬済み'}</button></div>`).join("")||'<div class="empty">登録がありません</div>'}
+ <br><button class="secondary" onclick="addMed()">＋薬・予防薬を追加</button>
+ <div class="notice" style="margin-top:12px">🔔 公開版では指定日の数日前にプッシュ通知できます。</div>`);
+}
+function addMed(){
+ openM("薬・予防薬を追加",`<label>薬・予防薬名</label><input id="mn" placeholder="フィラリア予防薬"><label>次回日</label><input id="md" type="date"><label>何日前に通知？</label><input id="mday" type="number" value="3"><br><button class="primary" onclick="saveMed()">保存</button>`);
+}
+function saveMed(){db.meds.push({id:Date.now(),pet:p().id,name:mn.value,next:md.value,days:Number(mday.value)||3,done:false});save();closeM();openMeds();toast("薬を登録しました")}
+function dose(id){let x=db.meds.find(x=>x.id===id);x.done=true;save();openMeds();toast("投薬済みにしました")}
+function openDocs(){
+ let a=(db.documents||[]).filter(x=>x.pet===p().id);
+ openM("💉 ワクチン・書類",`<label>書類を選択</label><input id="df" type="file" accept="image/*,.pdf"><label>書類名</label><input id="dn" placeholder="ワクチン証明書"><br><button class="primary" onclick="saveDoc()">保存</button>
+ <div class="section" style="margin-top:18px">保存済み</div>${a.map(x=>`<div class="row"><div>📄 <b>${esc(x.name)}</b><div class="muted">${esc(x.fileName)}</div></div><span class="badge">保存済み</span></div>`).join("")||'<div class="empty">まだありません</div>'}
+ <div class="notice" style="margin-top:10px">公開版では写真/PDFをクラウドストレージに保存できます。</div>`);
+}
+function saveDoc(){let f=df.files[0];if(!f)return alert("ファイルを選択してください");let r=new FileReader();r.onload=()=>{db.documents.push({id:Date.now(),pet:p().id,name:dn.value||"書類",fileName:f.name,src:r.result});save();closeM();openDocs();toast("書類を保存しました")};r.readAsDataURL(f)}
+function openHealth(){
+ let a=(db.health||[]).filter(x=>x.pet===p().id);
+ openM("⚖️ 健康記録・グラフ",`<label>日付</label><input id="hd" type="date" value="${new Date().toISOString().slice(0,10)}">
+ <div class="two"><div><label>体重 kg</label><input id="hw" type="number" step=".1"></div><div><label>体温 ℃</label><input id="htemp" type="number" step=".1"></div>
+ <div><label>食事量 g/日</label><input id="hf" type="number"></div><div><label>飲水量 ml/日</label><input id="hwater" type="number"></div></div>
+ <label>排便</label><input id="hstool" placeholder="普通・少ない等"><label>排尿</label><input id="hurine" placeholder="普通・多い等"><label>症状・メモ</label><textarea id="hsym" rows="2"></textarea><br>
+ <button class="primary" onclick="saveHealth()">保存</button>
+ <div class="section">最近の記録</div>${a.slice(0,5).map(x=>`<div class="row"><div><b>${fmt(x.date)}</b><div class="muted">食事 ${x.food||"-"}g ・ 水 ${x.water||"-"}ml ・ 体温 ${x.temp||"-"}℃</div></div><b>${x.weight||"-"}kg</b></div>`).join("")}`);
+}
+function saveHealth(){db.health.unshift({id:Date.now(),pet:p().id,date:hd.value,weight:hw.value,food:hf.value,water:hwater.value,temp:htemp.value,stool:hstool.value,urine:hurine.value,symptom:hsym.value});if(hw.value)p().weight=Number(hw.value);save();closeM();openHealth();toast("健康記録を保存しました")}
+function openFood(){
+ let f=db.food||{};
+ openM("🍚 食事・おやつ",`<label>フード名</label><input id="fn" value="${esc(f.name||"")}"><label>1日の量 g</label><input id="fa" type="number" value="${f.amount||""}"><label>食事回数/日</label><input id="ft" type="number" value="${f.times||2}"><label>おやつ</label><input id="fs" value="${esc(f.treat||"")}"><label>食事変更履歴</label><textarea id="fh" rows="3">${esc(f.history||"")}</textarea><br><button class="primary" onclick="saveFood()">保存</button>`);
+}
+function saveFood(){db.food={name:fn.value,amount:Number(fa.value)||0,times:Number(ft.value)||1,treat:fs.value,history:fh.value};save();closeM();toast("食事情報を保存しました")}
+function openEmergency(){
+ let m=db.medical||{};
+ openM("🚨 緊急時プロフィール",`<div class="card" style="margin:0"><div style="font-size:30px">${p().emoji}</div><h2>${esc(p().name)}</h2><p>${esc(p().type)} ・ ${p().weight||"-"}kg</p><p><b>アレルギー</b><br>${esc(m.allergy||"なし")}</p><p><b>持病</b><br>${esc(m.chronic||"なし")}</p><p><b>かかりつけ</b><br>${esc(m.hospital||"未登録")}<br>${esc(m.hospitalTel||"")}</p><p><b>現在の薬</b><br>${esc(m.meds||"なし")}</p></div><button class="primary" style="width:100%;margin-top:10px" onclick="closeM();openSummary()">診療用サマリーを表示</button>`);
+}
+function openSummary(){
+ let m=db.medical||{}, hs=(db.health||[]).filter(x=>x.pet===p().id)[0]||{};
+ openM("🏥 診療用サマリー",`<div class="card" style="margin:0"><h2>${p().emoji} ${esc(p().name)}</h2><p>${esc(p().type)} ・ ${p().weight||"-"}kg</p><hr>
+ <b>既往歴</b><p>${esc(m.history||"なし")}</p><b>アレルギー</b><p>${esc(m.allergy||"なし")}</p><b>持病・手術歴</b><p>${esc(m.chronic||"なし")} / ${esc(m.surgery||"なし")}</p><b>ワクチン・投薬</b><p>${(db.records||[]).filter(x=>x.pet===p().id&&["ワクチン","薬・予防薬"].includes(x.type)).slice(0,4).map(x=>esc(x.type)+"："+esc(x.value)).join("<br>")||"記録なし"}</p><b>最近の健康</b><p>体重 ${hs.weight||p().weight||"-"}kg ・ 体温 ${hs.temp||"-"}℃<br>排便 ${esc(hs.stool||"-")} ・ 排尿 ${esc(hs.urine||"-")}<br>${esc(hs.symptom||"")}</p><b>かかりつけ病院</b><p>${esc(m.hospital||"未登録")} ${esc(m.hospitalTel||"")}</p></div>`);
+}
+function openAI(){
+ let q=p(), hs=(db.health||[]).filter(x=>x.pet===q.id).sort((a,b)=>b.date.localeCompare(a.date)), alerts=[];
+ if(hs.length>=2&&hs[0].weight&&hs[1].weight&&Number(hs[0].weight)<Number(hs[1].weight)*.97) alerts.push("⚠️ 最近の体重が以前より減っています。継続して記録し、気になる場合は動物病院へ相談してください。");
+ let meds=(db.meds||[]).filter(x=>x.pet===q.id&&!x.done); if(meds.length) alerts.push(`🔔 ${meds.length}件の薬・予防薬に未完了の予定があります。`);
+ let soon=(db.events||[]).filter(x=>x.pet===q.id).sort((a,b)=>a.date.localeCompare(b.date))[0]; if(soon) alerts.push(`📅 次の予定は ${fmt(soon.date)}「${esc(soon.title)}」です。`);
+ if(!alerts.length) alerts.push("✅ 現在、記録から大きな注意点は見つかりませんでした。");
+ openM("📈 AI健康アシスタント",`<div class="notice">${alerts.join("<hr>")}</div><p class="muted" style="margin-top:12px">これは登録データからの整理・注意喚起であり、獣医師による診断ではありません。症状がある場合は動物病院へご相談ください。</p>`);
+}
+
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));}
+home();
+</script></body></html>

@@ -1,0 +1,22 @@
+{
+  "name": "うちの子ノート",
+  "short_name": "うちの子ノート",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fffaf7",
+  "theme_color": "#f47f7f",
+  "description": "ペットの健康、予定、カルテ、薬、食事、思い出、家族共有をまとめて管理するWebアプリ",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
