@@ -1,0 +1,9 @@
+{
+  "name": "Pet Salon Manager Pro",
+  "short_name": "Pet Salon",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f7",
+  "theme_color": "#222222",
+  "description": "ペットサロン向け顧客・カルテ・予約・会計・売上管理アプリ"
+}
