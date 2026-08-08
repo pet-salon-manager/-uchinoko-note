@@ -189,7 +189,7 @@ async function uploadPhoto(){
 
   toast('写真を保存しました');
   await openMemories();
-}ん
+}
 
   function openCloud(){openModal('クラウド同期',`<div class="notice ok">Supabaseに接続済みです。</div><div><b>ユーザー</b><br>${esc(state.session?.user?.email||'')}</div><div style="margin-top:10px"><b>Project</b><br><span class="small">${esc(cfg.SUPABASE_URL)}</span></div><div class="actions"><button class="btn" id="syncNow">今すぐ同期</button><button class="btn danger" id="logout">ログアウト</button></div>`);document.getElementById('syncNow').onclick=async()=>{await loadAll();closeModal();toast('同期しました');};document.getElementById('logout').onclick=async()=>{await sb.auth.signOut();closeModal();};}
 
