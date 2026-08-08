@@ -55,9 +55,128 @@
   function recentRecords(){const pid=state.activePet?.id; const arr=state.health.filter(x=>!pid||x.pet_id===pid).slice(0,4); return arr.length?arr.map(x=>`<div class="list-item spread"><div>${fmtDate(x.logged_at||x.created_at)}</div><div>${x.weight_kg?`体重 ${esc(x.weight_kg)}kg`:esc(x.notes||'健康記録')}</div></div>`).join(''):'<div class="muted">まだ記録がありません。</div>';}
 
   async function addPet(){
-    openModal('ペットを追加',`<label>名前</label><input id="pn"><div class="two"><div><label>種類</label><input id="ps" placeholder="犬・猫など"></div><div><label>犬種・猫種</label><input id="pb"></div></div><div class="two"><div><label>性別</label><select id="psex"><option value="">未設定</option><option>メス</option><option>オス</option></select></div><div><label>誕生日</label><input id="pbd" type="date"></div></div><div class="two"><div><label>体重 kg</label><input id="pw" type="number" step="0.1"></div><div><label>血液型</label><input id="pbt"></div></div><div class="actions"><button class="btn primary" id="psave">保存</button></div>`);
-    document.getElementById('psave').onclick=async()=>{const payload={owner_id:state.session.user.id,name:pn.value.trim(),species:ps.value.trim(),breed:pb.value.trim(),sex:psex.value,birth_date:pbd.value||null,weight_kg:pw.value?Number(pw.value):null,blood_type:pbt.value.trim()}; if(!payload.name)return alert('名前を入力してください'); const {data,error}=await sb.from('pets').insert(payload).select().single(); if(error)return alert(error.message); state.pets.push(data);state.activePet=data;closeModal();toast('ペットを保存しました');renderHome();};
-  }
+  openModal(
+    'ペットを追加',
+    `
+    <label>名前</label>
+    <input id="pn">
+
+    <div class="two">
+      <div>
+        <label>種類</label>
+        <input id="ps" placeholder="犬・猫など">
+      </div>
+      <div>
+        <label>犬種・猫種</label>
+        <input id="pb">
+      </div>
+    </div>
+
+    <div class="two">
+      <div>
+        <label>性別</label>
+        <select id="psex">
+          <option value="">未設定</option>
+          <option>オス</option>
+          <option>メス</option>
+        </select>
+      </div>
+      <div>
+        <label>誕生日</label>
+        <input id="pbd" type="date">
+      </div>
+    </div>
+
+    <div class="two">
+      <div>
+        <label>体重 kg</label>
+        <input id="pw" type="number" step="0.1">
+      </div>
+      <div>
+        <label>血液型</label>
+        <input id="pbt">
+      </div>
+    </div>
+
+    <label>ペットの写真</label>
+    <input id="petPhoto" type="file" accept="image/*">
+
+    <div class="actions">
+      <button class="btn primary" id="psave">保存</button>
+    </div>
+    `
+  );
+
+  document.getElementById('psave').onclick=async()=>{
+
+    const name=document.getElementById('pn').value.trim();
+
+    if(!name){
+      alert('名前を入力してください');
+      return;
+    }
+
+    let photo_path=null;
+    let photo_url=null;
+
+    const file=document.getElementById('petPhoto').files[0];
+
+    if(file){
+      const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+
+      photo_path=
+        `${state.session.user.id}/pets/${Date.now()}.${ext}`;
+
+      const {error:uploadError}=await sb.storage
+        .from(cfg.STORAGE_BUCKET)
+        .upload(photo_path,file,{upsert:false});
+
+      if(uploadError){
+        alert(uploadError.message);
+        return;
+      }
+
+      const {data:urlData}=sb.storage
+        .from(cfg.STORAGE_BUCKET)
+        .getPublicUrl(photo_path);
+
+      photo_url=urlData.publicUrl;
+    }
+
+    const payload={
+      owner_id:state.session.user.id,
+      name:name,
+      species:document.getElementById('ps').value.trim(),
+      breed:document.getElementById('pb').value.trim(),
+      sex:document.getElementById('psex').value,
+      birth_date:document.getElementById('pbd').value||null,
+      weight_kg:document.getElementById('pw').value
+        ?Number(document.getElementById('pw').value)
+        :null,
+      blood_type:document.getElementById('pbt').value.trim(),
+      photo_path:photo_path,
+      photo_url:photo_url
+    };
+
+    const {data,error}=await sb
+      .from('pets')
+      .insert(payload)
+      .select()
+      .single();
+
+    if(error){
+      alert(error.message);
+      return;
+    }
+
+    state.pets.push(data);
+    state.activePet=data;
+
+    closeModal();
+    toast('ペットを保存しました');
+    renderHome();
+  };
+}
 
   function switchPet(){openModal('ペットを切り替え',state.pets.map(p=>`<button class="btn" style="width:100%;margin:6px 0" data-id="${p.id}">${esc(p.name)}</button>`).join('')||'<div class="muted">ペットがありません</div>'); mb.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{state.activePet=state.pets.find(p=>String(p.id)===b.dataset.id);closeModal();renderHome();});}
 
