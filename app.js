@@ -42,7 +42,10 @@
   function petCard(){
     const p=state.activePet;
     if(!p) return `<div class="card"><div class="section-title" style="margin:0 0 8px">ペットがまだ登録されていません</div><button class="btn primary" onclick="window.U.addPet()">＋ ペット追加</button></div>`;
-    return `<div class="card"><div class="spread"><div class="row"><div class="pet-emoji">🐶</div><div><div class="pet-name">${esc(p.name||'名前未設定')}</div><div>${esc(p.breed||p.species||'')}</div><div class="muted">${p.weight_kg?`体重 ${esc(p.weight_kg)} kg`:''}</div></div></div><button class="btn" onclick="window.U.switchPet()">切替</button></div></div>`;
+    return `<div class="card"><div class="spread"><div class="row">${p.photo_url
+  ? `<img src="${esc(p.photo_url)}" alt="${esc(p.name || 'ペット')}" style="width:76px;height:76px;border-radius:50%;object-fit:cover;display:block;">`
+  : `<div class="pet-emoji">🐶</div>`
+}<div><div class="pet-name">${esc(p.name||'名前未設定')}</div><div>${esc(p.breed||p.species||'')}</div><div class="muted">${p.weight_kg?`体重 ${esc(p.weight_kg)} kg`:''}</div></div></div><button class="btn" onclick="window.U.switchPet()">切替</button></div></div>`;
   }
   function upcoming(){
     const pid=state.activePet?.id; const arr=state.appointments.filter(a=>!pid||a.pet_id===pid).slice(0,3);
