@@ -178,8 +178,24 @@
   };
 }
 
-  function switchPet(){openModal('ペットを切り替え',state.pets.map(p=>`<button class="btn" style="width:100%;margin:6px 0" data-id="${p.id}">${esc(p.name)}</button>`).join('')||'<div class="muted">ペットがありません</div>'); mb.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{state.activePet=state.pets.find(p=>String(p.id)===b.dataset.id);closeModal();renderHome();});}
+ function switchPet(){
+  openModal(
+    'ペットを切り替え',
+    state.pets.map(p=>`
+      <button class="btn" style="width:100%;margin:6px 0" data-id="${p.id}">
+        ${esc(p.name)}
+      </button>
+    `).join('') || '<div class="muted">ペットがありません</div>'
+  );
 
+  mb.querySelectorAll('[data-id]').forEach(b=>{
+    b.onclick=()=>{
+      state.activePet=state.pets.find(p=>String(p.id)===b.dataset.id);
+      closeModal();
+      renderHome();
+    };
+  });
+}
   function openSchedule(){
     const pid=state.activePet?.id; const rows=state.appointments.filter(a=>!pid||a.pet_id===pid);
     openModal('予定・リマインダー',`<button class="btn primary" id="addAppt">＋予定追加</button><div style="margin-top:10px">${rows.map(a=>`<div class="list-item"><b>${esc(a.title||a.appointment_type||'予定')}</b><br><span class="muted">${fmtDate(a.appointment_at)} ${a.appointment_at?new Date(a.appointment_at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):''}</span></div>`).join('')||'<div class="muted">予定なし</div>'}</div>`);
