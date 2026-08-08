@@ -71,8 +71,125 @@
   function openRecords(){const p=state.activePet;if(!p)return addPet();openModal('健康記録・グラフ',`<button class="btn primary" id="addHealth">＋健康記録</button><div style="margin-top:10px">${state.health.filter(x=>x.pet_id===p.id).map(x=>`<div class="list-item spread"><span>${fmtDate(x.logged_at||x.created_at)}</span><span>${x.weight_kg?`体重 ${esc(x.weight_kg)}kg`:esc(x.notes||'記録')}</span></div>`).join('')||'<div class="muted">記録なし</div>'}</div>`);document.getElementById('addHealth').onclick=addHealth;}
   function addHealth(){openModal('健康記録を追加',`<label>日時</label><input id="hdate" type="datetime-local"><div class="two"><div><label>体重 kg</label><input id="hweight" type="number" step="0.1"></div><div><label>食事量 g</label><input id="hfood" type="number"></div></div><div class="two"><div><label>飲水量 ml</label><input id="hwater" type="number"></div><div><label>体温 ℃</label><input id="htemp" type="number" step="0.1"></div></div><label>メモ</label><textarea id="hnotes"></textarea><div class="actions"><button class="btn primary" id="hsave">保存</button></div>`);document.getElementById('hsave').onclick=async()=>{const payload={pet_id:state.activePet.id,logged_at:hdate.value?new Date(hdate.value).toISOString():new Date().toISOString(),weight_kg:hweight.value?Number(hweight.value):null,food_g:hfood.value?Number(hfood.value):null,water_ml:hwater.value?Number(hwater.value):null,temperature_c:htemp.value?Number(htemp.value):null,notes:hnotes.value.trim()};const {data,error}=await sb.from('health_logs').insert(payload).select().single();if(error)return alert(error.message);state.health.unshift(data);closeModal();toast('健康記録を保存しました');renderHome();};}
 
-  function openMemories(){const p=state.activePet;if(!p)return addPet();openModal('思い出・写真',`<div class="notice">写真はSupabase Storage「${esc(cfg.STORAGE_BUCKET)}」に保存します。</div><input id="photoFile" type="file" accept="image/*"><label>メモ</label><input id="photoNote"><div class="actions"><button class="btn primary" id="uploadPhoto">写真を保存</button></div><div id="photoResult"></div>`);document.getElementById('uploadPhoto').onclick=uploadPhoto;}
-  async function uploadPhoto(){const f=document.getElementById('photoFile').files[0];if(!f)return alert('写真を選んでください');const ext=(f.name.split('.').pop()||'jpg').toLowerCase();const path=`${state.session.user.id}/${state.activePet.id}/${Date.now()}.${ext}`;const {error}=await sb.storage.from(cfg.STORAGE_BUCKET).upload(path,f,{upsert:false});if(error)return alert(error.message);const {data}=sb.storage.from(cfg.STORAGE_BUCKET).getPublicUrl(path); const url=data.publicUrl; await sb.from('documents').insert({pet_id:state.activePet.id,document_type:'photo',title:document.getElementById('photoNote').value.trim()||'思い出写真',file_url:url,storage_path:path});document.getElementById('photoResult').innerHTML=`<img class="file-preview" src="${url}">`;toast('写真を保存しました');}
+  async function openMemories(){
+  const p=state.activePet;
+  if(!p)return addPet();
+
+  const {data:memories,error}=await sb
+    .from('memories')
+    .select('*')
+    .eq('pet_id',p.id)
+    .order('taken_at',{ascending:false});
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  const album=(memories||[]).map(m=>`
+    <div class="card" style="margin-top:12px">
+      <img
+        src="${esc(m.photo_url||'')}"
+        style="width:100%;max-height:360px;object-fit:cover;border-radius:18px"
+        onclick="window.open('${esc(m.photo_url||'')}','_blank')"
+      >
+      <div style="margin-top:10px">
+        <b>${esc(m.memo||'思い出写真')}</b>
+      </div>
+      <div class="small">
+        ${fmtDate(m.taken_at||m.created_at)}
+      </div>
+    </div>
+  `).join('');
+
+  openModal(
+    '思い出・写真',
+    `
+      <div class="notice">
+        写真はSupabase Storage「${esc(cfg.STORAGE_BUCKET)}」に保存します。
+      </div>
+
+      <label>写真</label>
+      <input id="photoFile" type="file" accept="image/*">
+
+      <label>メモ</label>
+      <input id="photoNote" placeholder="今日もかわいい">
+
+      <div class="actions">
+        <button class="btn primary" id="uploadPhoto">写真を保存</button>
+      </div>
+
+      <div id="photoResult"></div>
+
+      <div class="section-title" style="margin-top:22px">
+        保存した思い出
+      </div>
+
+      ${
+        album ||
+        '<div class="muted" style="margin-top:12px">まだ写真はありません</div>'
+      }
+    `
+  );
+
+  document.getElementById('uploadPhoto').onclick=uploadPhoto;
+}
+
+async function uploadPhoto(){
+  const f=document.getElementById('photoFile').files[0];
+
+  if(!f){
+    alert('写真を選んでください');
+    return;
+  }
+
+  if(!state.activePet){
+    alert('ペットを選択してください');
+    return;
+  }
+
+  const ext=(f.name.split('.').pop()||'jpg').toLowerCase();
+
+  const path=
+    `${state.session.user.id}/${state.activePet.id}/${Date.now()}.${ext}`;
+
+  const {error:uploadError}=await sb.storage
+    .from(cfg.STORAGE_BUCKET)
+    .upload(path,f,{upsert:false});
+
+  if(uploadError){
+    alert(uploadError.message);
+    return;
+  }
+
+  const {data}=sb.storage
+    .from(cfg.STORAGE_BUCKET)
+    .getPublicUrl(path);
+
+  const url=data.publicUrl;
+
+  const memo=
+    document.getElementById('photoNote').value.trim() || '思い出写真';
+
+  const {error:memoryError}=await sb
+    .from('memories')
+    .insert({
+      pet_id:state.activePet.id,
+      owner_id:state.session.user.id,
+      photo_path:path,
+      photo_url:url,
+      memo:memo,
+      taken_at:new Date().toISOString()
+    });
+
+  if(memoryError){
+    alert(memoryError.message);
+    return;
+  }
+
+  toast('写真を保存しました');
+  await openMemories();
+}ん
 
   function openCloud(){openModal('クラウド同期',`<div class="notice ok">Supabaseに接続済みです。</div><div><b>ユーザー</b><br>${esc(state.session?.user?.email||'')}</div><div style="margin-top:10px"><b>Project</b><br><span class="small">${esc(cfg.SUPABASE_URL)}</span></div><div class="actions"><button class="btn" id="syncNow">今すぐ同期</button><button class="btn danger" id="logout">ログアウト</button></div>`);document.getElementById('syncNow').onclick=async()=>{await loadAll();closeModal();toast('同期しました');};document.getElementById('logout').onclick=async()=>{await sb.auth.signOut();closeModal();};}
 
