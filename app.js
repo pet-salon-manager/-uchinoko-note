@@ -486,7 +486,7 @@ async function uploadPhoto(){
 
   document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));b.classList.add('active');const t=b.dataset.tab;if(t==='home')renderHome();else if(t==='schedule')openSchedule();else if(t==='records')openRecords();else if(t==='memories')openMemories();else if(t==='menu')renderMenu();});
   document.getElementById('quickAdd').onclick=()=>{if(!state.session)return; addAppointment();};
-  window.U={addPet,switchPet,openSchedule,openRecords,openMemories,openCloud,openMedical,openMeds,openMeals,openFamily,openProviders,openSummary,openAI,backup};
+  window.U={addPet,editPet,switchPet,openSchedule,openRecords,openMemories,openCloud,openMedical,openMeds,openMeals,openFamily,openProviders,openSummary,openAI,backup};
 
   sb.auth.onAuthStateChange(async(_event,session)=>{state.session=session;if(!session){loginScreen();}else{await loadAll();}});
   sb.auth.getSession().then(({data})=>{state.session=data.session;if(!state.session)loginScreen();else loadAll();});
