@@ -122,7 +122,7 @@ if(newFile){
     weight_kg:document.getElementById('epw').value
       ?Number(document.getElementById('epw').value)
       :null,
-    blood_type:document.getElementById('epbt').value.trim()、
+    blood_type:document.getElementById('epbt').value.trim(),
  photo_path:newPhotoPath,
 photo_url:newPhotoUrl
  };
