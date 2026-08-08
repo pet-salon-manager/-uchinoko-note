@@ -178,23 +178,46 @@
   };
 }
 
- function switchPet(){
+function switchPet(){
   openModal(
     'ペットを切り替え',
-    state.pets.map(p=>`
-      <button class="btn" style="width:100%;margin:6px 0" data-id="${p.id}">
-        ${esc(p.name)}
+    (
+      state.pets.map(p=>`
+        <button
+          class="btn"
+          style="width:100%;margin:6px 0"
+          data-id="${p.id}">
+          ${esc(p.name)}
+        </button>
+      `).join('')
+      ||
+      '<div class="muted">ペットがありません</div>'
+    )
+    +
+    `
+      <button
+        class="btn primary"
+        style="width:100%;margin:14px 0 0"
+        id="addNewPet">
+        ＋ 新しいペットを追加
       </button>
-    `).join('') || '<div class="muted">ペットがありません</div>'
+    `
   );
 
   mb.querySelectorAll('[data-id]').forEach(b=>{
     b.onclick=()=>{
-      state.activePet=state.pets.find(p=>String(p.id)===b.dataset.id);
+      state.activePet=state.pets.find(
+        p=>String(p.id)===b.dataset.id
+      );
       closeModal();
       renderHome();
     };
   });
+
+  document.getElementById('addNewPet').onclick=()=>{
+    closeModal();
+    addPet();
+  };
 }
   function openSchedule(){
     const pid=state.activePet?.id; const rows=state.appointments.filter(a=>!pid||a.pet_id===pid);
