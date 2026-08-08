@@ -47,6 +47,125 @@
   : `<div class="pet-emoji">🐶</div>`
 }<div><div class="pet-name">${esc(p.name||'名前未設定')}</div><div>${esc(p.breed||p.species||'')}</div><div class="muted">${p.weight_kg?`体重 ${esc(p.weight_kg)} kg`:''}</div></div></div><button class="btn" onclick="window.U.switchPet()">切替</button></div></div>`;
   }
+  async function editPet(){
+  const p=state.activePet;
+  if(!p)return;
+
+  openModal(
+    'ペット情報を編集',
+    `
+    <label>名前</label>
+    <input id="epn" value="${esc(p.name||'')}">
+
+    <label>種類</label>
+    <input id="eps" value="${esc(p.species||'')}">
+
+    <label>犬種・猫種</label>
+    <input id="epb" value="${esc(p.breed||'')}">
+
+    <label>性別</label>
+    <select id="epsex">
+      <option value="">未設定</option>
+      <option value="オス" ${p.sex==='オス'?'selected':''}>オス</option>
+      <option value="メス" ${p.sex==='メス'?'selected':''}>メス</option>
+    </select>
+
+    <label>誕生日</label>
+    <input id="epbd" type="date" value="${esc(p.birth_date||'')}">
+
+    <label>体重 kg</label>
+    <input id="epw" type="number" step="0.1" value="${esc(p.weight_kg||'')}">
+
+    <label>血液型</label>
+    <input id="epbt" value="${esc(p.blood_type||'')}">
+
+    <label>ペットの写真を変更</label>
+<input id="epPhoto" type="file" accept="image/*">
+    
+    <div class="actions">
+      <button class="btn primary" id="epSave">変更を保存</button>
+      <button class="btn danger" id="epDelete">このペットを削除</button>
+    </div>
+    `
+  );
+document.getElementById('epSave').onclick=async()=>{
+  let newPhotoPath=p.photo_path||null;
+let newPhotoUrl=p.photo_url||null;
+
+const newFile=document.getElementById('epPhoto').files[0];
+
+if(newFile){
+  const ext=(newFile.name.split('.').pop()||'jpg').toLowerCase();
+  newPhotoPath=`${state.session.user.id}/pets/${Date.now()}.${ext}`;
+
+  const {error:uploadError}=await sb.storage
+    .from(cfg.STORAGE_BUCKET)
+    .upload(newPhotoPath,newFile,{upsert:false});
+
+  if(uploadError){
+    alert(uploadError.message);
+    return;
+  }
+
+  const {data:urlData}=sb.storage
+    .from(cfg.STORAGE_BUCKET)
+    .getPublicUrl(newPhotoPath);
+
+  newPhotoUrl=urlData.publicUrl;
+}
+  const updates={
+    name:document.getElementById('epn').value.trim(),
+    species:document.getElementById('eps').value.trim(),
+    breed:document.getElementById('epb').value.trim(),
+    sex:document.getElementById('epsex').value,
+    birth_date:document.getElementById('epbd').value||null,
+    weight_kg:document.getElementById('epw').value
+      ?Number(document.getElementById('epw').value)
+      :null,
+    blood_type:document.getElementById('epbt').value.trim()、
+ photo_path:newPhotoPath,
+photo_url:newPhotoUrl
+ };
+
+  const {data,error}=await sb
+    .from('pets')
+    .update(updates)
+    .eq('id',p.id)
+    .select()
+    .single();
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  Object.assign(p,data);
+  state.activePet=p;
+  closeModal();
+  toast('ペット情報を変更しました');
+  renderHome();
+};
+
+document.getElementById('epDelete').onclick=async()=>{
+  if(!confirm('このペットを削除しますか？')) return;
+
+  const {error}=await sb
+    .from('pets')
+    .delete()
+    .eq('id',p.id);
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  state.pets=state.pets.filter(x=>x.id!==p.id);
+  state.activePet=state.pets[0]||null;
+
+  closeModal();
+  toast('ペットを削除しました');
+  renderHome();
+};}
   function upcoming(){
     const pid=state.activePet?.id; const arr=state.appointments.filter(a=>!pid||a.pet_id===pid).slice(0,3);
     if(!arr.length) return '<div class="muted">予定はまだありません。</div>';
